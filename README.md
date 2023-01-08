@@ -62,6 +62,6 @@ Profiling results for "your_program":
 
 Installation
 ------------
-``get-profile`` can be installed with ``pip``::
+``get-profile`` can be installed with ``pip``:
 
     $ pip install get-profile
