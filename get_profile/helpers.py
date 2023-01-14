@@ -2,14 +2,24 @@ import cProfile
 import itertools
 import types
 from typing import List
+import warnings
+
 
 import pandas as pd
 import numpy as np
 
 
-def get_profiling_stats(pr: cProfile.Profile) -> pd.DataFrame:
+def get_profiling_stats(
+    pr: cProfile.Profile,
+    top_n: int = 15,
+    only_my_functions: bool = False,
+    sort_by: str = "tottime -r",
+    min_col: str = "tottime -r",
+    min_val: float = 0.005,
+    callees: bool = True,
+) -> pd.DataFrame:
     code_to_str = np.vectorize(
-        lambda x: f"CALLABLE: {x.co_name}\nLINENO: {x.co_firstlineno}\nFILE: {x.co_filename}"
+        lambda x: f"CALLABLE: {x.co_name}\nLINENO: {x.co_firstlineno}\nFILE: {x.co_filename}\nTEST: {'none'}"
         if isinstance(x, types.CodeType)
         else str(x)
     )
@@ -20,44 +30,83 @@ def get_profiling_stats(pr: cProfile.Profile) -> pd.DataFrame:
         if x
         else ""
     )
-    df = (
-        pd.DataFrame(
-            pr.getstats(),
-            columns=[
-                "func",
-                "ncalls",
-                "ccalls",
-                "tottime",
-                "cumtime",
-                "callees",
-            ],
-        )
-        .query("tottime > .005")
-        .sort_values(by="tottime", ascending=False)
-        .head(15)
-        .drop(columns=["ccalls"])
-        .assign(
-            rpercall=lambda x: np.round(x.tottime / x.ncalls, 4),
-            percall=lambda x: np.round(x.cumtime / x.ncalls),
-            rtottime=lambda x: np.round(x.tottime, 4),
-            tottime=lambda x: np.round(x.cumtime, 4),
-            func=lambda x: code_to_str(x.func),
-            callees=lambda x: caller_to_str(x.callees),
-        )
-        .rename(columns={"rtottime": "tottime -r", "rpercall": "percall -r"})
-        .reset_index(drop=True)
-    )[
-        [
+    df = pd.DataFrame(
+        pr.getstats(),
+        columns=[
             "func",
             "ncalls",
-            "tottime -r",
-            "percall -r",
+            "ccalls",
             "tottime",
-            "percall",
+            "cumtime",
             "callees",
-        ]
+        ],
+    )
+    if not callees:
+        df = df.drop(columns=["callees"])
+    else:
+        df = df.assign(callees=lambda x: caller_to_str(x["callees"]))
+    df = (
+        df.drop(columns=["ccalls"])
+        .assign(
+            **{
+                "percall -r": lambda x: x["tottime"] / x["ncalls"],
+                "percall": lambda x: x["cumtime"] / x["ncalls"],
+                "tottime -r": lambda x: x["tottime"],
+                "tottime": lambda x: x["cumtime"],
+                "func": lambda x: code_to_str(x.func),
+            }
+        )
+        .sort_values(by=sort_by, ascending=False)
+        .query(f"`{min_col}` > {min_val}")
+        .assign(
+            **{
+                "percall -r": lambda x: np.round(x["percall -r"], 4),
+                "percall": lambda x: np.round(x["percall"], 4),
+                "tottime -r": lambda x: np.round(x["tottime -r"], 4),
+                "tottime": lambda x: np.round(x["tottime"], 4),
+            }
+        )
+    )
+    if only_my_functions:
+        # remove rows whose "func" contains either a /python*.*/ folder or <.*>
+        temp_df = df[~df["func"].str.contains(r"/python[0-9]+\.[0-9]+/|<.*>")]
+        if temp_df.empty:
+            warnings.warn(
+                "get_filter could not filter out functions from native python and installed packages:"
+                "the folowing regex pattern must have been found in the file path of your code "
+                r"'/python[0-9]+\.[0-9]+/|<.*>'"
+            )
+        else:
+            df = temp_df
+    return_cols = [
+        "func",
+        "ncalls",
+        "tottime -r",
+        "percall -r",
+        "tottime",
+        "percall",
     ]
-    return df
+    return_cols = return_cols + ["callees"] if callees else return_cols
+    return df.head(top_n)[return_cols]
+
+
+def get_max_col_widths(max_width: int, callees: bool):
+    if callees:
+        if max_width < 73:
+            warnings.warn(
+                "get_profile(callees=True) cannot be shrunk narrower than an output_width of 73 chars"
+            )
+            max_width = 73
+        c1 = int((max_width - 61) * 0.35)
+        c7 = int((max_width - 61) * 0.65)
+        return [c1, 6, 10, 10, 7, 7, c7]
+    else:
+        if max_width < 63:
+            warnings.warn(
+                "get_profile(callees=True) cannot be shrunk narrower than an output_width of 63 chars"
+            )
+            max_width = 63
+        return [max_width - 59, 6, 10, 10, 7, 7]
 
 
 def get_readable_grid(two_d_array, max_col_widths: List[int]) -> str:
