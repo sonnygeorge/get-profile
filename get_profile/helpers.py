@@ -19,7 +19,7 @@ def get_profiling_stats(
     callees: bool = True,
 ) -> pd.DataFrame:
     code_to_str = np.vectorize(
-        lambda x: f"CALLABLE: {x.co_name}\nLINENO: {x.co_firstlineno}\nFILE: {x.co_filename}\nTEST: {'none'}"
+        lambda x: f"CALLABLE: {x.co_name}\nLINENO: {x.co_firstlineno}\nFILE: {x.co_filename}"
         if isinstance(x, types.CodeType)
         else str(x)
     )
@@ -72,7 +72,7 @@ def get_profiling_stats(
         temp_df = df[~df["func"].str.contains(r"/python[0-9]+\.[0-9]+/|<.*>")]
         if temp_df.empty:
             warnings.warn(
-                "get_filter could not filter out functions from native python and installed packages:"
+                "@get_filter could not filter out functions from native python and installed packages:"
                 "the folowing regex pattern must have been found in the file path of your code "
                 r"'/python[0-9]+\.[0-9]+/|<.*>'"
             )
