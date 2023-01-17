@@ -65,3 +65,39 @@ Installation
 ``get-profile`` can be installed with ``pip``:
 
     $ pip install get-profile
+
+
+Decorator Parameters
+--------------------
+
+Release 0.0.2 supports the following parameters for the get_profile decorator:
+
+```python
+get_profile(
+
+# topn limits the table to only the top n rows
+top_n: int = 10,
+
+# only_my_functions = True will filter out functions whose 
+# "func" field contains the regex pattern: 
+# r"/python[0-9]+\.[0-9]+/|<.*>",
+# (a hacky way to limit the output to just your own functions)
+only_my_functions: bool = False,  
+
+# sort_by is the column you would like to sort by (descending)
+sort_by: str = "tottime -r",
+
+# min_col is the column you would like to filter by (min_val)
+min_col: str = "tottime -r",
+
+# min_val is the minimum value for the min_col
+min_val: float = 0.005,
+
+# output_width is the width in chars of the output table
+output_width: int = 150,
+
+# toggles whether or not the "calees" column is printed
+callees: bool = True,
+
+)
+```
