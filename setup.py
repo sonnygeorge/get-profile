@@ -7,7 +7,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 with codecs.open(os.path.join(here, "README.md"), encoding="utf-8") as fh:
     long_description = "\n" + fh.read()
 
-VERSION = "0.0.1"
+VERSION = "0.0.2"
 DESCRIPTION = "Quickly profile your code with a single line of code."
 LONG_DESCRIPTION = "A simple library to inject the most profiling bang-for-buck into a single line of code (decorator)."
 
@@ -22,7 +22,7 @@ setup(
     long_description=long_description,
     packages=find_packages(),
     install_requires=["pandas", "numpy"],
-    keywords=["python", "profiling", "profile", "runtime", "decorator"],
+    keywords=["python", "profiling", "profile", "runtime", "decorator", "cprofile"],
     classifiers=[
         "Intended Audience :: Developers",
         "Programming Language :: Python :: 3",
